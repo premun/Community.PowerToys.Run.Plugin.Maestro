@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Community.PowerToys.Run.Plugin.Dependencies" />
+    <PackageReference Include="Microsoft.DotNet.ProductConstructionService.Client" />
   </ItemGroup>
 
   <ItemGroup>
