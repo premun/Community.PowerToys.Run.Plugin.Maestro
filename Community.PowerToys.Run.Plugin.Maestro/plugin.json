@@ -1,0 +1,14 @@
+{
+  "ID": "077861CDA5AB4F12BB04C3C3B8AD3517",
+  "ActionKeyword": "maestro",
+  "IsGlobal": false,
+  "Name": "Maestro",
+  "Author": "hlaueriksson",
+  "Version": "0.87.0",
+  "Language": "csharp",
+  "Website": "https://github.com/hlaueriksson/Community.PowerToys.Run.Plugin.Maestro",
+  "ExecuteFileName": "Community.PowerToys.Run.Plugin.Maestro.dll",
+  "IcoPathDark": "Images\\maestro.dark.png",
+  "IcoPathLight": "Images\\maestro.light.png",
+  "DynamicLoading": false
+}
