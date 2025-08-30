@@ -1,12 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using ManagedCommon;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Wox.Infrastructure;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Wox.Plugin;
 
 namespace Community.PowerToys.Run.Plugin.Maestro;
@@ -14,7 +11,7 @@ namespace Community.PowerToys.Run.Plugin.Maestro;
 /// <summary>
 /// Main class of this plugin that implement all used interfaces.
 /// </summary>
-public class Main : IPlugin, IContextMenu, IDisposable
+public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
 {
     /// <summary>
     /// ID of the plugin.
@@ -23,44 +20,119 @@ public class Main : IPlugin, IContextMenu, IDisposable
 
     public string Name => ".NET Maestro";
 
-    public string Description => "Manage Maestro subscriptions (https://maestro.dot.net/)";
+    public string Description { get; } = $"Manage Maestro subscriptions ({ProductConstructionServiceApiOptions.ProductionMaestroUri})";
 
     private PluginInitContext Context { get; set; }
 
     private IProductConstructionServiceApi MaestroClient;
 
-    private string IconPath { get; set; }
+    private string _iconPath { get; set; }
+
+    private readonly Dictionary<Guid, Subscription> _subscriptions = [];
 
     private bool Disposed { get; set; }
 
-    public IEnumerable<PluginAdditionalOption> AdditionalOptions => throw new NotImplementedException();
-
-    /// <summary>
-    /// Return a filtered list, based on the given query.
-    /// </summary>
-    /// <param name="query">The query to filter the list.</param>
-    /// <returns>A filtered list, can be empty when nothing was found.</returns>
     public List<Result> Query(Query query)
     {
+        if (string.IsNullOrEmpty(query.Search.Trim()) || !Guid.TryParse(query.Search.Trim(), out var subscriptionId))
+        {
+            return
+            [
+                new Result()
+                {
+                    Title = "Insert subscription ID",
+                    SubTitle = $"E.g. {Guid.NewGuid()}",
+                    IcoPath = _iconPath,
+                }
+            ];
+        }
+        else
+        {
+            if (_subscriptions.TryGetValue(subscriptionId, out var subscription))
+            {
+                return
+                [
+                    new Result
+                    {
+                        Title = $"Subscription {subscriptionId} ({subscription.Channel})",
+                        SubTitle = $"{subscription.SourceRepository} -> {subscription.TargetRepository} / {subscription.TargetBranch}",
+                        IcoPath = _iconPath,
+                        ContextData = subscriptionId.ToString(),
+                        Action = _ =>
+                        {
+                            Clipboard.SetDataObject(subscriptionId.ToString());
+                            return true;
+                        },
+                    }
+                ];
+            }
+
+            return
+            [
+                new Result
+                {
+                    Title = $"Loading subscription {subscriptionId}...",
+                    SubTitle = $"Fetching from " + ProductConstructionServiceApiOptions.ProductionMaestroUri,
+                    IcoPath = _iconPath,
+                }
+            ];
+        }
+    }
+
+    public List<Result> Query(Query query, bool delayedExecution)
+    {
+        if (!delayedExecution)
+        {
+            return Query(query);
+        }
+
         var search = query.Search;
 
-        return
-        [
-            new Result
+        if (!Guid.TryParse(search.Trim(), out var subscriptionId))
+        {
+            return Query(query);
+        }
+
+        if (_subscriptions.ContainsKey(subscriptionId))
+        {
+            return Query(query);
+        }
+
+        try
+        {
+            MaestroClient ??= PcsApiFactory.GetAuthenticated(accessToken: null, managedIdentityId: null, disableInteractiveAuth: false);
+            var subscription = MaestroClient.Subscriptions.GetSubscriptionAsync(subscriptionId).GetAwaiter().GetResult();
+            if (subscription != null)
             {
-                QueryTextDisplay = search,
-                IcoPath = IconPath,
-                Title = "Title: " + search,
-                SubTitle = "SubTitle",
-                ToolTipData = new ToolTipData("Title", "Text"),
-                Action = _ =>
-                {
-                    Clipboard.SetDataObject(search);
-                    return true;
-                },
-                ContextData = search,
+                _subscriptions[subscriptionId] = subscription;
             }
-        ];
+            else
+            {
+                return
+                [
+                    new Result
+                    {
+                        Title = $"Subscription {subscriptionId} not found",
+                        SubTitle = $"No subscription with ID {subscriptionId} exists in Maestro",
+                        IcoPath = _iconPath,
+                    }
+                ];
+            }
+        }
+        catch (Exception ex)
+        {
+            return
+            [
+                new Result
+                {
+                    Title = $"Error loading subscription {subscriptionId}",
+                    SubTitle = ex.Message,
+                    IcoPath = _iconPath,
+                }
+            ];
+        }
+
+        return Query(query);
     }
 
     /// <summary>
@@ -72,39 +144,6 @@ public class Main : IPlugin, IContextMenu, IDisposable
         Context = context ?? throw new ArgumentNullException(nameof(context));
         Context.API.ThemeChanged += OnThemeChanged;
         UpdateIconPath(Context.API.GetCurrentTheme());
-
-        // MaestroClient = PcsApiFactory.GetAuthenticated(accessToken: null, managedIdentityId: null, disableInteractiveAuth: false);
-    }
-
-    /// <summary>
-    /// Return a list context menu entries for a given <see cref="Result"/> (shown at the right side of the result).
-    /// </summary>
-    /// <param name="selectedResult">The <see cref="Result"/> for the list with context menu entries.</param>
-    /// <returns>A list context menu entries.</returns>
-    public List<ContextMenuResult> LoadContextMenus(Result selectedResult)
-    {
-        if (selectedResult.ContextData is string search)
-        {
-            return
-            [
-                new ContextMenuResult
-                {
-                    PluginName = Name,
-                    Title = "Copy to clipboard (Ctrl+C)",
-                    FontFamily = "Segoe MDL2 Assets",
-                    Glyph = "\xE8C8", // Copy
-                    AcceleratorKey = Key.C,
-                    AcceleratorModifiers = ModifierKeys.Control,
-                    Action = _ =>
-                    {
-                        Clipboard.SetDataObject(search);
-                        return true;
-                    },
-                }
-            ];
-        }
-
-        return [];
     }
 
     /// <inheritdoc/>
@@ -133,9 +172,7 @@ public class Main : IPlugin, IContextMenu, IDisposable
         Disposed = true;
     }
 
-    private void UpdateIconPath(Theme theme) => IconPath = theme == Theme.Light || theme == Theme.HighContrastWhite ? "Images/maestro.png" : "Images/maestro.png";
+    private void UpdateIconPath(Theme theme) => _iconPath = theme == Theme.Light || theme == Theme.HighContrastWhite ? "Images/maestro.png" : "Images/maestro.png";
 
     private void OnThemeChanged(Theme currentTheme, Theme newTheme) => UpdateIconPath(newTheme);
-    public Control CreateSettingPanel() => throw new NotImplementedException();
-    public void UpdateSettings(PowerLauncherPluginSettings settings) => throw new NotImplementedException();
 }

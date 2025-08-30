@@ -10,5 +10,5 @@
   "ExecuteFileName": "Community.PowerToys.Run.Plugin.Maestro.dll",
   "IcoPathDark": "Images\\maestro.png",
   "IcoPathLight": "Images\\maestro.png",
-  "DynamicLoading": false
+  "DynamicLoading": true
 }
