@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Community.PowerToys.Run.Plugin.Dependencies" Version="0.87.0" />
+
+    <PackageVersion Include="MSTest" Version="3.6.3" />
+    <PackageVersion Include="System.IO.Abstractions" Version="21.0.29" />
+  </ItemGroup>
+</Project>
