@@ -6,6 +6,7 @@
     <Platforms>x64;ARM64</Platforms>
     <PlatformTarget>$(Platform)</PlatformTarget>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <NoWarn>$(NoWarn);MSB3270</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
