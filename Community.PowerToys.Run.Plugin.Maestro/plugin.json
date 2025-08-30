@@ -8,7 +8,7 @@
   "Language": "csharp",
   "Website": "https://github.com/premun/Community.PowerToys.Run.Plugin.Maestro",
   "ExecuteFileName": "Community.PowerToys.Run.Plugin.Maestro.dll",
-  "IcoPathDark": "Images\\maestro.dark.png",
-  "IcoPathLight": "Images\\maestro.light.png",
+  "IcoPathDark": "Images\\maestro.png",
+  "IcoPathLight": "Images\\maestro.png",
   "DynamicLoading": false
 }

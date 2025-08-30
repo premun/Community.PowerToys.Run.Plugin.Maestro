@@ -1,8 +1,12 @@
-using ManagedCommon;
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using ManagedCommon;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.PowerToys.Settings.UI.Library;
+using Wox.Infrastructure;
 using Wox.Plugin;
 
 namespace Community.PowerToys.Run.Plugin.Maestro;
@@ -23,9 +27,13 @@ public class Main : IPlugin, IContextMenu, IDisposable
 
     private PluginInitContext Context { get; set; }
 
+    private IProductConstructionServiceApi MaestroClient;
+
     private string IconPath { get; set; }
 
     private bool Disposed { get; set; }
+
+    public IEnumerable<PluginAdditionalOption> AdditionalOptions => throw new NotImplementedException();
 
     /// <summary>
     /// Return a filtered list, based on the given query.
@@ -64,6 +72,8 @@ public class Main : IPlugin, IContextMenu, IDisposable
         Context = context ?? throw new ArgumentNullException(nameof(context));
         Context.API.ThemeChanged += OnThemeChanged;
         UpdateIconPath(Context.API.GetCurrentTheme());
+
+        // MaestroClient = PcsApiFactory.GetAuthenticated(accessToken: null, managedIdentityId: null, disableInteractiveAuth: false);
     }
 
     /// <summary>
@@ -123,7 +133,9 @@ public class Main : IPlugin, IContextMenu, IDisposable
         Disposed = true;
     }
 
-    private void UpdateIconPath(Theme theme) => IconPath = theme == Theme.Light || theme == Theme.HighContrastWhite ? "Images/maestro.light.png" : "Images/maestro.dark.png";
+    private void UpdateIconPath(Theme theme) => IconPath = theme == Theme.Light || theme == Theme.HighContrastWhite ? "Images/maestro.png" : "Images/maestro.png";
 
     private void OnThemeChanged(Theme currentTheme, Theme newTheme) => UpdateIconPath(newTheme);
+    public Control CreateSettingPanel() => throw new NotImplementedException();
+    public void UpdateSettings(PowerLauncherPluginSettings settings) => throw new NotImplementedException();
 }
