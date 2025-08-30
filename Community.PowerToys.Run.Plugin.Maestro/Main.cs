@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows;
-using System.Windows.Input;
+using Community.PowerToys.Run.Plugin.Maestro.Maestro.Client;
+using Community.PowerToys.Run.Plugin.Maestro.Maestro.Client.Models;
 using ManagedCommon;
-using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Wox.Plugin;
 
 namespace Community.PowerToys.Run.Plugin.Maestro;
@@ -17,15 +16,15 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
     /// <summary>
     /// ID of the plugin.
     /// </summary>
-    public static string PluginID => "077861CDA5AB4F12BB04C3C3B8AD3517";
+    public static string PluginID => "042861CDA5AB4F12BB04C3C3B8AD3517";
 
     public string Name => ".NET Maestro";
 
-    public string Description { get; } = $"Manage Maestro subscriptions ({ProductConstructionServiceApiOptions.ProductionMaestroUri})";
+    public string Description { get; } = $"Manage Maestro subscriptions ({MaestroApiOptions.ProductionMaestroUri})";
 
     private PluginInitContext Context { get; set; }
 
-    private IProductConstructionServiceApi MaestroClient;
+    private IMaestroApi MaestroClient;
 
     private string _iconPath { get; set; }
 
@@ -73,7 +72,7 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
                 new Result
                 {
                     Title = $"Loading subscription {subscriptionId}...",
-                    SubTitle = $"Fetching from " + ProductConstructionServiceApiOptions.ProductionMaestroUri,
+                    SubTitle = $"Fetching from " + MaestroApiOptions.ProductionMaestroUri,
                     IcoPath = _iconPath,
                 }
             ];
@@ -101,6 +100,7 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
 
         try
         {
+            MaestroClient ??= MaestroApiFactory.GetAuthenticated(accessToken: null, managedIdentityId: null, disableInteractiveAuth: false);
             var subscription = MaestroClient.Subscriptions.GetSubscriptionAsync(subscriptionId).GetAwaiter().GetResult();
             if (subscription != null)
             {
@@ -144,8 +144,6 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
         Context = context ?? throw new ArgumentNullException(nameof(context));
         Context.API.ThemeChanged += OnThemeChanged;
         UpdateIconPath(Context.API.GetCurrentTheme());
-
-        // MaestroClient = PcsApiFactory.GetAuthenticated(accessToken: null, managedIdentityId: null, disableInteractiveAuth: false);
     }
 
     /// <inheritdoc/>
