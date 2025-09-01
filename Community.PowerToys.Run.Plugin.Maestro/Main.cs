@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows.Input;
 using Community.PowerToys.Run.Plugin.Maestro.Helpers;
 using Maestro.Common;
 using ManagedCommon;
@@ -15,7 +16,7 @@ namespace Community.PowerToys.Run.Plugin.Maestro;
 /// <summary>
 /// Main class of this plugin that implement all used interfaces.
 /// </summary>
-public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
+public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
 {
     /// <summary>
     /// ID of the plugin.
@@ -148,6 +149,8 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
                 : $"Forward flow ({subscription.TargetDirectory})");
         }
 
+        string maestroUri = $"{ProductConstructionServiceApiOptions.ProductionMaestroUri}subscriptions?search={subscription.Id}&showDisabled=True";
+
         List<Result> results =
         [
             new Result
@@ -159,23 +162,27 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
                     {(subscription.Enabled ? "Enabled" : "Disabled")}{codeflow}
                     """,
                 IcoPath = _iconPath,
-                Action = _ => OpenUriInBrowser($"{ProductConstructionServiceApiOptions.ProductionMaestroUri}subscriptions?search={subscription.Id}&showDisabled=True"),
-            DisableUsageBasedScoring = true,
+                Action = _ => OpenUriInBrowser(maestroUri),
+                ContextData = ResultContext.OpenInBrowser(maestroUri),
+                DisableUsageBasedScoring = true,
             }
         ];
 
         if (subscription.LastAppliedBuild != null)
         {
             var buildRepoType = GitRepoUrlUtils.ParseTypeFromUri(subscription.LastAppliedBuild.GetRepository());
+            var commitUri = GitRepoUrlUtils.GetRepoAtCommitUri(subscription.LastAppliedBuild.GetRepository(), subscription.LastAppliedBuild.Commit);
             results.Add(new Result
             {
                 Title = $"Commit: {subscription.LastAppliedBuild.Commit}",
                 IcoPath = buildRepoType == GitRepoType.AzureDevOps ? Icons.AzureDevOps : Icons.GitHub,
                 SubTitle = subscription.LastAppliedBuild.GetRepository(),
-                Action = action => OpenUriInBrowser(GitRepoUrlUtils.GetRepoAtCommitUri(subscription.LastAppliedBuild.GetRepository(), subscription.LastAppliedBuild.Commit)),
+                Action = _ => OpenUriInBrowser(commitUri),
+                ContextData = ResultContext.OpenInBrowser(commitUri),
                 DisableUsageBasedScoring = true,
             });
 
+            var buildUri = subscription.LastAppliedBuild.GetBuildLink();
             results.Add(new Result
             {
                 Title = $"Last applied build: {subscription.LastAppliedBuild.AzureDevOpsBuildNumber} / BAR ID: {subscription.LastAppliedBuild.Id}",
@@ -184,18 +191,20 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
                     $"""
                     Applied {subscription.LastAppliedBuild.DateProduced.ToTimeAgo()}
                     """,
-
-                Action = action => OpenUriInBrowser(subscription.LastAppliedBuild.GetBuildLink()),
+                Action = action => OpenUriInBrowser(buildUri),
+                ContextData = ResultContext.OpenInBrowser(buildUri),
                 DisableUsageBasedScoring = true,
             });
         }
 
+        bool darcEditAction(ActionContext _) => Helper.OpenCommandInShell("darc", string.Empty, $"update-subscription --id {subscription.Id}");
         results.Add(new Result
         {
             Title = "Edit subscription",
             SubTitle = $"Edit subscription via darc",
             IcoPath = Icons.Edit,
-            Action = _ => Helper.OpenCommandInShell("darc", string.Empty, $"update-subscription --id {subscription.Id}"),
+            Action = darcEditAction,
+            ContextData = new ResultContext("Edit subscription via darc", darcEditAction, "\xE756"),
             DisableUsageBasedScoring = true,
         });
 
@@ -251,5 +260,31 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
     {
         Helper.OpenCommandInShell(BrowserInfo.Path, BrowserInfo.ArgumentsPattern, uri);
         return true;
+    }
+
+    public List<ContextMenuResult> LoadContextMenus(Result selectedResult)
+    {
+        var context = selectedResult.ContextData as ResultContext;
+        if (context == null)
+        {
+            return [];
+        }
+
+        return
+        [
+            new ContextMenuResult
+            {
+                Title = context.Title,
+                Glyph = context.Glyph,
+                AcceleratorKey = Key.Enter,
+                FontFamily = "Segoe Fluent Icons,Segoe MDL2 Assets",
+                Action = context.Action,
+            }
+        ];
+    }
+
+    private record ResultContext(string Title, Func<ActionContext, bool> Action, string Glyph)
+    {
+        public static ResultContext OpenInBrowser(string uri) => new("Open in browser", _ => OpenUriInBrowser(uri), "\xE8A7");
     }
 }
