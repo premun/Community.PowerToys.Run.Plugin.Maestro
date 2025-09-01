@@ -213,7 +213,7 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
             IcoPath = Icons.Trigger,
             Action = _ =>
             {
-                _maestroClient!.Subscriptions.TriggerSubscriptionAsync(subscription.Id).GetAwaiter().GetResult();
+                _maestroClient!.Subscriptions.TriggerSubscriptionAsync(subscription.Id);
                 return true;
             },
             DisableUsageBasedScoring = true,
