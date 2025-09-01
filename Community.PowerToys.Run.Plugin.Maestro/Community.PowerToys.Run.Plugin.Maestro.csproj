@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!--<PackageReference Include="Community.PowerToys.Run.Plugin.Dependencies" />-->
     <PackageReference Include="Microsoft.DotNet.ProductConstructionService.Client" />
   </ItemGroup>
 
@@ -23,6 +22,9 @@
     </Reference>
     <Reference Include="PowerToys.Settings.UI.Lib">
       <HintPath>libs\PowerToys.Settings.UI.Lib</HintPath>
+    </Reference>
+    <Reference Include="Wox.Infrastructure">
+      <HintPath>libs\Wox.Infrastructure.dll</HintPath>
     </Reference>
     <Reference Include="Wox.Plugin">
       <HintPath>libs\Wox.Plugin.dll</HintPath>

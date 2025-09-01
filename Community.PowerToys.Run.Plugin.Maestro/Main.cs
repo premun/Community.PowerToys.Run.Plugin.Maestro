@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows;
+using Community.PowerToys.Run.Plugin.Maestro.Helpers;
+using Maestro.Common;
 using ManagedCommon;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Wox.Infrastructure;
 using Wox.Plugin;
+
+using BrowserInfo = Wox.Plugin.Common.DefaultBrowserInfo;
 
 namespace Community.PowerToys.Run.Plugin.Maestro;
 
@@ -22,11 +26,11 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
 
     public string Description { get; } = $"Manage Maestro subscriptions ({ProductConstructionServiceApiOptions.ProductionMaestroUri})";
 
-    private PluginInitContext Context { get; set; }
+    private PluginInitContext Context { get; set; } = null!;
 
-    private IProductConstructionServiceApi MaestroClient;
+    private IProductConstructionServiceApi? _maestroClient;
 
-    private string _iconPath { get; set; }
+    private string _iconPath { get; set; } = null!;
 
     private readonly Dictionary<Guid, Subscription> _subscriptions = [];
 
@@ -50,21 +54,7 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
         {
             if (_subscriptions.TryGetValue(subscriptionId, out var subscription))
             {
-                return
-                [
-                    new Result
-                    {
-                        Title = $"Subscription {subscriptionId} ({subscription.Channel})",
-                        SubTitle = $"{subscription.SourceRepository} -> {subscription.TargetRepository} / {subscription.TargetBranch}",
-                        IcoPath = _iconPath,
-                        ContextData = subscriptionId.ToString(),
-                        Action = _ =>
-                        {
-                            Clipboard.SetDataObject(subscriptionId.ToString());
-                            return true;
-                        },
-                    }
-                ];
+                return DisplaySubscription(subscription);
             }
 
             return
@@ -100,11 +90,12 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
 
         try
         {
-            MaestroClient ??= PcsApiFactory.GetAuthenticated(accessToken: null, managedIdentityId: null, disableInteractiveAuth: false);
-            var subscription = MaestroClient.Subscriptions.GetSubscriptionAsync(subscriptionId).GetAwaiter().GetResult();
+            _maestroClient ??= PcsApiFactory.GetAuthenticated(accessToken: null, managedIdentityId: null, disableInteractiveAuth: false);
+            var subscription = _maestroClient.Subscriptions.GetSubscriptionAsync(subscriptionId).GetAwaiter().GetResult();
             if (subscription != null)
             {
                 _subscriptions[subscriptionId] = subscription;
+                return DisplaySubscription(subscription);
             }
             else
             {
@@ -131,8 +122,6 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
                 }
             ];
         }
-
-        return Query(query);
     }
 
     /// <summary>
@@ -144,6 +133,61 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
         Context = context ?? throw new ArgumentNullException(nameof(context));
         Context.API.ThemeChanged += OnThemeChanged;
         UpdateIconPath(Context.API.GetCurrentTheme());
+    }
+
+    private List<Result> DisplaySubscription(Subscription subscription)
+    {
+        var (sourceOwner, sourceRepo) = GitRepoUrlUtils.GetRepoNameAndOwner(subscription.SourceRepository);
+        var (targetOwner, targetRepo) = GitRepoUrlUtils.GetRepoNameAndOwner(subscription.TargetRepository);
+
+        string? codeflow = null;
+        if (subscription.SourceEnabled)
+        {
+            codeflow = Environment.NewLine + (subscription.IsBackflow()
+                ? $"Backflow ({subscription.TargetDirectory})"
+                : $"Forward flow ({subscription.TargetDirectory})");
+        }
+
+        List<Result> results =
+        [
+            new Result
+            {
+                Title = $"{subscription.Channel.Name}",
+                SubTitle =
+                    $"""
+                    {sourceOwner}/{sourceRepo} -> {targetOwner}/{targetRepo} @ {subscription.TargetBranch}
+                    Enabled: {subscription.Enabled}{codeflow}
+                    """,
+                IcoPath = _iconPath,
+                Action = _ => OpenUriInBrowser($"{ProductConstructionServiceApiOptions.ProductionMaestroUri}subscriptions?search={subscription.Id}&showDisabled=True"),
+            }
+        ];
+
+        if (subscription.LastAppliedBuild != null)
+        {
+            var buildRepoType = GitRepoUrlUtils.ParseTypeFromUri(subscription.LastAppliedBuild.GetRepository());
+            results.Add(new Result
+            {
+                Title = $"Commit: {subscription.LastAppliedBuild.Commit}",
+                IcoPath = buildRepoType == GitRepoType.AzureDevOps ? Icons.AzureDevOps : Icons.GitHub,
+                SubTitle = subscription.LastAppliedBuild.GetRepository(),
+                Action = action => OpenUriInBrowser(GitRepoUrlUtils.GetRepoAtCommitUri(subscription.LastAppliedBuild.GetRepository(), subscription.LastAppliedBuild.Commit)),
+            });
+
+            results.Add(new Result
+            {
+                Title = $"Last applied build: {subscription.LastAppliedBuild.AzureDevOpsBuildNumber} / BAR ID: {subscription.LastAppliedBuild.Id}",
+                IcoPath = Icons.AzureDevOps,
+                SubTitle =
+                    $"""
+                    Applied {subscription.LastAppliedBuild.DateProduced.ToTimeAgo()}
+                    """,
+
+                Action = action => OpenUriInBrowser(subscription.LastAppliedBuild.GetBuildLink()),
+            });
+        }
+
+        return results;
     }
 
     /// <inheritdoc/>
@@ -172,7 +216,16 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
         Disposed = true;
     }
 
-    private void UpdateIconPath(Theme theme) => _iconPath = theme == Theme.Light || theme == Theme.HighContrastWhite ? "Images/maestro.png" : "Images/maestro.png";
+    private void UpdateIconPath(Theme theme) => _iconPath = theme == Theme.Light || theme == Theme.HighContrastWhite
+        ? Icons.Maestro
+        // TODO Dark theme icon
+        : Icons.Maestro;
 
     private void OnThemeChanged(Theme currentTheme, Theme newTheme) => UpdateIconPath(newTheme);
+
+    private static bool OpenUriInBrowser(string uri)
+    {
+        Helper.OpenCommandInShell(BrowserInfo.Path, BrowserInfo.ArgumentsPattern, uri);
+        return true;
+    }
 }
