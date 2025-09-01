@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -10,25 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Community.PowerToys.Run.Plugin.Dependencies" />
     <PackageReference Include="Microsoft.DotNet.ProductConstructionService.Client" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="PowerToys.Common.UI">
-      <HintPath>libs\PowerToys.Common.UI.dll</HintPath>
-    </Reference>
-    <Reference Include="PowerToys.ManagedCommon">
-      <HintPath>libs\PowerToys.ManagedCommon.dll</HintPath>
-    </Reference>
-    <Reference Include="PowerToys.Settings.UI.Lib">
-      <HintPath>libs\PowerToys.Settings.UI.Lib</HintPath>
-    </Reference>
-    <Reference Include="Wox.Infrastructure">
-      <HintPath>libs\Wox.Infrastructure.dll</HintPath>
-    </Reference>
-    <Reference Include="Wox.Plugin">
-      <HintPath>libs\Wox.Plugin.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>

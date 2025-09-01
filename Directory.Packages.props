@@ -4,6 +4,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Community.PowerToys.Run.Plugin.Dependencies" Version="0.93.0" />
     <PackageVersion Include="Microsoft.DotNet.ProductConstructionService.Client" Version="1.1.0-beta.25429.3" />
   </ItemGroup>
 </Project>
