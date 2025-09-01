@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows.Input;
+using System.Linq;
 using Community.PowerToys.Run.Plugin.Maestro.Helpers;
 using Maestro.Common;
 using ManagedCommon;
@@ -203,7 +203,6 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
             Title = "Edit subscription",
             SubTitle = $"Edit subscription via darc",
             IcoPath = Icons.Edit,
-            Action = darcEditAction,
             ContextData = new ResultContext("Edit subscription via darc", darcEditAction, "\xE756"),
             DisableUsageBasedScoring = true,
         });
@@ -264,22 +263,25 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
 
     public List<ContextMenuResult> LoadContextMenus(Result selectedResult)
     {
-        var context = selectedResult.ContextData as ResultContext;
-        if (context == null)
+        if (selectedResult.ContextData is not ResultContext[] contexts || contexts.Length == 0)
         {
-            return [];
+            if (selectedResult.ContextData is not ResultContext context)
+            {
+                return [];
+            }
+
+            contexts = [context];
         }
 
         return
         [
-            new ContextMenuResult
+            ..contexts.Select(c => new ContextMenuResult
             {
-                Title = context.Title,
-                Glyph = context.Glyph,
-                AcceleratorKey = Key.Enter,
+                Title = c.Title,
+                Glyph = c.Glyph,
                 FontFamily = "Segoe Fluent Icons,Segoe MDL2 Assets",
-                Action = context.Action,
-            }
+                Action = c.Action,
+            })
         ];
     }
 
