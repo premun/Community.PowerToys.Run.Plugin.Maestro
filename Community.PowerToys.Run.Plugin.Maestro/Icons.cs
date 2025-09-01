@@ -7,4 +7,5 @@ public static class Icons
     public const string AzureDevOps = $"{BasePath}/ado.png";
     public const string GitHub = $"{BasePath}/github.png";
     public const string Edit = $"{BasePath}/edit.png";
+    public const string Trigger = $"{BasePath}/trigger.png";
 }

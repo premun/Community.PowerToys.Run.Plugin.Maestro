@@ -20,7 +20,7 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
     /// <summary>
     /// ID of the plugin.
     /// </summary>
-    public static string PluginID => "077861CDA5AB4F12BB04C3C3B8AD3517";
+    public static string PluginID => "077861CDA5AB4F12BB04C3C3B8AD3518";
 
     public string Name => ".NET Maestro";
 
@@ -144,7 +144,7 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
         if (subscription.SourceEnabled)
         {
             codeflow = Environment.NewLine + (subscription.IsBackflow()
-                ? $"Backflow ({subscription.TargetDirectory})"
+                ? $"Backflow ({subscription.SourceDirectory})"
                 : $"Forward flow ({subscription.TargetDirectory})");
         }
 
@@ -156,10 +156,11 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
                 SubTitle =
                     $"""
                     {sourceOwner}/{sourceRepo} -> {targetOwner}/{targetRepo} @ {subscription.TargetBranch}
-                    Enabled: {subscription.Enabled}{codeflow}
+                    {(subscription.Enabled ? "Enabled" : "Disabled")}{codeflow}
                     """,
                 IcoPath = _iconPath,
                 Action = _ => OpenUriInBrowser($"{ProductConstructionServiceApiOptions.ProductionMaestroUri}subscriptions?search={subscription.Id}&showDisabled=True"),
+            DisableUsageBasedScoring = true,
             }
         ];
 
@@ -172,6 +173,7 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
                 IcoPath = buildRepoType == GitRepoType.AzureDevOps ? Icons.AzureDevOps : Icons.GitHub,
                 SubTitle = subscription.LastAppliedBuild.GetRepository(),
                 Action = action => OpenUriInBrowser(GitRepoUrlUtils.GetRepoAtCommitUri(subscription.LastAppliedBuild.GetRepository(), subscription.LastAppliedBuild.Commit)),
+                DisableUsageBasedScoring = true,
             });
 
             results.Add(new Result
@@ -184,6 +186,7 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
                     """,
 
                 Action = action => OpenUriInBrowser(subscription.LastAppliedBuild.GetBuildLink()),
+                DisableUsageBasedScoring = true,
             });
         }
 
@@ -193,6 +196,19 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
             SubTitle = $"Edit subscription via darc",
             IcoPath = Icons.Edit,
             Action = _ => Helper.OpenCommandInShell("darc", string.Empty, $"update-subscription --id {subscription.Id}"),
+            DisableUsageBasedScoring = true,
+        });
+
+        results.Add(new Result
+        {
+            Title = "Trigger subscription",
+            IcoPath = Icons.Trigger,
+            Action = _ =>
+            {
+                _maestroClient!.Subscriptions.TriggerSubscriptionAsync(subscription.Id).GetAwaiter().GetResult();
+                return true;
+            },
+            DisableUsageBasedScoring = true,
         });
 
         return results;
