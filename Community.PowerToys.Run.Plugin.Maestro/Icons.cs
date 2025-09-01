@@ -2,7 +2,9 @@
 
 public static class Icons
 {
-    public const string Maestro = "Images/maestro.png";
-    public const string AzureDevOps = "Images/ado.png";
-    public const string GitHub = "Images/github.png";
+    private const string BasePath = "Images";
+    public const string Maestro = $"{BasePath}/maestro.png";
+    public const string AzureDevOps = $"{BasePath}/ado.png";
+    public const string GitHub = $"{BasePath}/github.png";
+    public const string Edit = $"{BasePath}/edit.png";
 }

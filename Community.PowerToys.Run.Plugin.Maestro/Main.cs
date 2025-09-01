@@ -187,6 +187,14 @@ public class Main : IPlugin, IDelayedExecutionPlugin, IDisposable
             });
         }
 
+        results.Add(new Result
+        {
+            Title = "Edit subscription",
+            SubTitle = $"Edit subscription via darc",
+            IcoPath = Icons.Edit,
+            Action = _ => Helper.OpenCommandInShell("darc", string.Empty, $"update-subscription --id {subscription.Id}"),
+        });
+
         return results;
     }
 
