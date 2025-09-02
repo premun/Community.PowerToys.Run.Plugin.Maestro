@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
 using Community.PowerToys.Run.Plugin.Maestro.Helpers;
 using Maestro.Common;
 using ManagedCommon;
@@ -196,18 +197,6 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
 
         if (subscription.LastAppliedBuild != null)
         {
-            var buildRepoType = GitRepoUrlUtils.ParseTypeFromUri(subscription.LastAppliedBuild.GetRepository());
-            var commitUri = GitRepoUrlUtils.GetRepoAtCommitUri(subscription.LastAppliedBuild.GetRepository(), subscription.LastAppliedBuild.Commit);
-            results.Add(new Result
-            {
-                Title = $"Commit: {subscription.LastAppliedBuild.Commit}",
-                IcoPath = buildRepoType == GitRepoType.AzureDevOps ? Icons.AzureDevOps : Icons.GitHub,
-                SubTitle = subscription.LastAppliedBuild.GetRepository(),
-                Action = _ => OpenUriInBrowser(commitUri),
-                ContextData = ResultContext.OpenInBrowser(commitUri),
-                DisableUsageBasedScoring = true,
-            });
-
             var buildUri = subscription.LastAppliedBuild.GetBuildLink();
             results.Add(new Result
             {
@@ -221,13 +210,35 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
                 ContextData = ResultContext.OpenInBrowser(buildUri),
                 DisableUsageBasedScoring = true,
             });
+
+            var buildRepoType = GitRepoUrlUtils.ParseTypeFromUri(subscription.LastAppliedBuild.GetRepository());
+            var commitUri = GitRepoUrlUtils.GetRepoAtCommitUri(subscription.LastAppliedBuild.GetRepository(), subscription.LastAppliedBuild.Commit);
+            results.Add(new Result
+            {
+                Title = $"Source commit: {subscription.LastAppliedBuild.Commit.Substring(0, 7)}",
+                IcoPath = buildRepoType == GitRepoType.AzureDevOps ? Icons.AzureDevOps : Icons.GitHub,
+                SubTitle = subscription.LastAppliedBuild.GetRepository(),
+                Action = _ => OpenUriInBrowser(commitUri),
+                ContextData = new[]
+                {
+                    new ResultContext(
+                        "Copy commit SHA",
+                        _ => {
+                            Clipboard.SetText(subscription.LastAppliedBuild.Commit);
+                            return true;
+                        },
+                        "\xE8C8"),
+                    ResultContext.OpenInBrowser(commitUri),
+                },
+                DisableUsageBasedScoring = true,
+            });
         }
 
         bool darcEditAction(ActionContext _) => Helper.OpenCommandInShell("darc", string.Empty, $"update-subscription --id {subscription.Id}");
         results.Add(new Result
         {
             Title = "Edit subscription",
-            SubTitle = $"Edit subscription via darc",
+            SubTitle = "Edit subscription via darc",
             IcoPath = Icons.Edit,
             ContextData = new ResultContext("Edit subscription via darc", darcEditAction, "\xE756"),
             DisableUsageBasedScoring = true,
