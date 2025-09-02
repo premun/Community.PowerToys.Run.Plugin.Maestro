@@ -39,17 +39,34 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
 
     public List<Result> Query(Query query)
     {
-        if (string.IsNullOrEmpty(query.Search.Trim()) || !Guid.TryParse(query.Search.Trim(), out var subscriptionId))
+        var search = query.Search.Trim();
+        if (string.IsNullOrEmpty(search) || !Guid.TryParse(search, out var subscriptionId))
         {
-            return
+            List<Result> results =
             [
-                new Result()
+                new Result
                 {
                     Title = "Insert subscription ID",
                     SubTitle = $"E.g. {Guid.NewGuid()}",
-                    IcoPath = _iconPath,
+                    IcoPath = Icons.Maestro,
+                    DisableUsageBasedScoring = true,
                 }
             ];
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                var logsUri = $"https://dataexplorer.azure.com/dashboards/83ee5d57-8e86-454e-b0ee-69568a6c10e7?p-_startTime=24hours&p-_endTime=now&p-_stringToFind=v-{search}#1e2aae4d-743c-4f3d-9633-8ec48b90d7a3";
+                results.Add(new Result
+                {
+                    Title = $"Show Maestro logs for '{search}'",
+                    IcoPath = Icons.Logs,
+                    Action = action => OpenUriInBrowser(logsUri),
+                    ContextData = ResultContext.OpenInBrowser(logsUri),
+                    DisableUsageBasedScoring = true,
+                });
+            }
+
+            return results;
         }
         else
         {
@@ -216,6 +233,16 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
                 _maestroClient!.Subscriptions.TriggerSubscriptionAsync(subscription.Id);
                 return true;
             },
+            DisableUsageBasedScoring = true,
+        });
+
+        var logsUri = $"https://dataexplorer.azure.com/dashboards/83ee5d57-8e86-454e-b0ee-69568a6c10e7?p-_startTime=24hours&p-_endTime=now&p-_stringToFind=v-{subscription.Id}#1e2aae4d-743c-4f3d-9633-8ec48b90d7a3";
+        results.Add(new Result
+        {
+            Title = $"Show Maestro logs for subscription",
+            IcoPath = Icons.Logs,
+            Action = action => OpenUriInBrowser(logsUri),
+            ContextData = ResultContext.OpenInBrowser(logsUri),
             DisableUsageBasedScoring = true,
         });
 
