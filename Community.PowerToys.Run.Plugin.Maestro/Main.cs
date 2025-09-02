@@ -175,8 +175,7 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
                 Title = $"{subscription.Channel.Name}",
                 SubTitle =
                     $"""
-                    {sourceOwner}/{sourceRepo} -> {targetOwner}/{targetRepo} @ {subscription.TargetBranch}
-                    {(subscription.Enabled ? "Enabled" : "Disabled")}{codeflow}
+                    {sourceOwner}/{sourceRepo} -> {targetOwner}/{targetRepo} @ {subscription.TargetBranch}{codeflow}
                     """,
                 IcoPath = _iconPath,
                 Action = _ => OpenUriInBrowser(maestroUri),
@@ -184,6 +183,16 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
                 DisableUsageBasedScoring = true,
             }
         ];
+
+        if (!subscription.Enabled)
+        {
+            results.Add(new Result
+            {
+                Title = "Subscription is disabled",
+                IcoPath = Icons.Disabled,
+                DisableUsageBasedScoring = true,
+            });
+        }
 
         if (subscription.LastAppliedBuild != null)
         {
