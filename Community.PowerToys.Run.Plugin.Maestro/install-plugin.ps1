@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 Get-Process PowerToys -ErrorAction SilentlyContinue | ForEach-Object { $_.Kill() }
 
 # Build the plugin and output to the PowerToys Run Plugins folder
-$pluginOutput = "C:\Users\prvysoky\AppData\Local\Microsoft\PowerToys\PowerToys Run\Plugins\Maestro"
+$pluginOutput = Join-Path $env:LOCALAPPDATA "Microsoft\PowerToys\PowerToys Run\Plugins\Maestro"
 dotnet build -c Release -o "$pluginOutput"
 
 # Start PowerToys
