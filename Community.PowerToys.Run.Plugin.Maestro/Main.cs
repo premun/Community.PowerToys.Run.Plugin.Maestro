@@ -259,39 +259,30 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
         if (subscription.SourceEnabled)
         {
             var featureFlag = _maestroClient!.FeatureFlags.GetFeatureFlagAsync("enable-rebase-strategy", subscription.Id).GetAwaiter().GetResult();
+            var rebaseOn = featureFlag.Value == "true";
 
-            if (featureFlag.Value == "true")
+            results.Add(new Result
             {
-                results.Add(new Result
+                Title = (rebaseOn ? "Disable" : "Enable") + " rebase strategy",
+                IcoPath = Icons.Rebase,
+                Action = _ =>
                 {
-                    Title = "Disable rebase strategy",
-                    IcoPath = Icons.Disabled,
-                    Action = _ =>
+                    if (!rebaseOn)
                     {
-                        _maestroClient!.FeatureFlags.RemoveFeatureFlagAsync("enable-rebase-strategy", subscription.Id);
-                        return true;
-                    },
-                    DisableUsageBasedScoring = true,
-                });
-            }
-            else
-            {
-                results.Add(new Result
-                {
-                    Title = "Enable rebase strategy",
-                    IcoPath = Icons.Trigger,
-                    Action = _ =>
-                    {
-                        _maestroClient!.FeatureFlags.SetFeatureFlagAsync(new(subscription.Id)
-                        {
+                        _maestroClient!.FeatureFlags.SetFeatureFlagAsync(new SetFeatureFlagRequest(subscription.Id) {
                             FlagName = "enable-rebase-strategy",
                             Value = "true",
                         });
-                        return true;
-                    },
-                    DisableUsageBasedScoring = true,
-                });
-            }
+                    }
+                    else
+                    {
+                        _maestroClient!.FeatureFlags.RemoveFeatureFlagAsync("enable-rebase-strategy", subscription.Id);
+                    }
+
+                    return true;
+                },
+                DisableUsageBasedScoring = true,
+            });
         }
 
         var logsUri = $"https://dataexplorer.azure.com/dashboards/83ee5d57-8e86-454e-b0ee-69568a6c10e7?p-_startTime=24hours&p-_endTime=now&p-_stringToFind=v-{subscription.Id}#1e2aae4d-743c-4f3d-9633-8ec48b90d7a3";

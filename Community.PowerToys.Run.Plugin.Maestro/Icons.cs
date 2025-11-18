@@ -10,4 +10,5 @@ public static class Icons
     public const string Trigger = $"{BasePath}/trigger.png";
     public const string Logs = $"{BasePath}/logs.png";
     public const string Disabled = $"{BasePath}/disabled.png";
+    public const string Rebase = $"{BasePath}/rebase.png";
 }
