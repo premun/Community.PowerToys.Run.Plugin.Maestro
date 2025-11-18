@@ -156,8 +156,8 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
 
     private List<Result> DisplaySubscription(Subscription subscription)
     {
-        var (sourceOwner, sourceRepo) = GitRepoUrlUtils.GetRepoNameAndOwner(subscription.SourceRepository);
-        var (targetOwner, targetRepo) = GitRepoUrlUtils.GetRepoNameAndOwner(subscription.TargetRepository);
+        var (sourceOwner, sourceRepo) = ParseRepoOwnerAndName(subscription.SourceRepository);
+        var (targetOwner, targetRepo) = ParseRepoOwnerAndName(subscription.TargetRepository);
 
         string? codeflow = null;
         if (subscription.SourceEnabled)
@@ -306,6 +306,21 @@ public class Main : IPlugin, IContextMenu, IDelayedExecutionPlugin, IDisposable
     {
         Helper.OpenCommandInShell(BrowserInfo.Path, BrowserInfo.ArgumentsPattern, uri);
         return true;
+    }
+
+    private static (string owner, string repo) ParseRepoOwnerAndName(string repositoryUrl)
+    {
+        try
+        {
+            return GitRepoUrlUtils.GetRepoNameAndOwner(repositoryUrl);
+        }
+        catch
+        {
+            var parts = repositoryUrl.TrimEnd('/').Split('/');
+            return parts.Length >= 2
+                ? (parts[^2], parts[^1])
+                : ("unknown", "unknown");
+        }
     }
 
     public List<ContextMenuResult> LoadContextMenus(Result selectedResult)
